@@ -20,54 +20,19 @@ package psd
 
 import org.apache.flink.streaming.api.scala._
 
-/**
- * Skeleton for a Flink Streaming Job.
- *
- * For a full example of a Flink Streaming Job, see the SocketTextStreamWordCount.java
- * file in the same package/directory or have a look at the website.
- *
- * You can also generate a .jar file that you can submit on your Flink
- * cluster. Just type
- * {{{
- *   mvn clean package
- * }}}
- * in the projects root directory. You will find the jar in
- * target/1-1.0-SNAPSHOT.jar
- * From the CLI you can then run
- * {{{
- *    ./bin/flink run -c psd.StreamingJob target/1-1.0-SNAPSHOT.jar
- * }}}
- *
- * For more information on the CLI see:
- *
- * http://flink.apache.org/docs/latest/apis/cli.html
- */
+
 object StreamingJob {
   def main(args: Array[String]) {
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
-    /**
-     * Here, you can start creating your execution plan for Flink.
-     *
-     * Start with getting some data from the environment, like
-     *  env.readTextFile(textPath);
-     *
-     * then, transform the resulting DataStream[String] using operations
-     * like
-     *   .filter()
-     *   .flatMap()
-     *   .join()
-     *   .group()
-     *
-     * and many more.
-     * Have a look at the programming guide:
-     *
-     * http://flink.apache.org/docs/latest/apis/streaming/index.html
-     *
-     */
+    val tmp = env.readTextFile("./alert.csv")
+      .map(x => SnortReport(x.split(",")(0), x.split(",")(1), x.split(",")(2)))
+      .map(x => print(x.Message+"\n"))
 
     // execute program
+    tmp.print()
+
     env.execute("Flink Streaming Scala API Skeleton")
   }
 }
