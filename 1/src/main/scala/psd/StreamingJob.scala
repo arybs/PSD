@@ -1,4 +1,3 @@
-package psd
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -18,20 +17,51 @@ package psd
  * limitations under the License.
  */
 
-import org.apache.flink.streaming.api.scala._
+import org.apache.flink.api.common.eventtime.{BoundedOutOfOrdernessWatermarks, SerializableTimestampAssigner, WatermarkStrategy}
+import org.apache.flink.api.java.io.TextInputFormat
+import org.apache.flink.api.scala.createTypeInformation
+import org.apache.flink.core.fs.Path
+import org.apache.flink.streaming.api.functions.source.FileProcessingMode
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
+import psd.SnortReport
+import psd.BoundedOutOfOrdernessGenerator
+
+import java.time.Duration
+
+
+
+
+
+
 
 
 object StreamingJob {
   def main(args: Array[String]) {
-    // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
+    // set up the streaming execution environment
+    val linereader = new TextInputFormat(new Path("./"))
 
-    val tmp = env.readTextFile("./alert.csv")
-      .map(x => SnortReport(x.split(",")(0), x.split(",")(1), x.split(",")(2)))
-      .map(x => print(x.Message+"\n"))
+    val lineSteam: DataStream[String] = env.readFile[String](linereader, "file:///G:\\Magisterka\\PSD\\Proj2/alert.csv",
+      FileProcessingMode.PROCESS_CONTINUOUSLY, 30000L)
 
+    // logika odczytanie z csv + watermarki
+
+    val SnortLines: DataStream[SnortReport] = lineSteam.map(x => new SnortReport(x))
+
+    val snortLinesWithTimeStamps = SnortLines.assignTimestampsAndWatermarks(
+      WatermarkStrategy
+        .forBoundedOutOfOrderness[SnortReport](Duration.ofSeconds(30))
+        .withTimestampAssigner(new SerializableTimestampAssigner[SnortReport] {
+          override def extractTimestamp(element: SnortReport, recordTimestamp: Long): Long =
+            element.timestamp.getTime
+        }
+    ))
+
+    // anliza => wartosci ktore zapisujemy || Logika biznesowa
+
+    // sink - zapis analizy
+    SnortLines.print()
     // execute program
-    tmp.print()
 
     env.execute("Flink Streaming Scala API Skeleton")
   }
