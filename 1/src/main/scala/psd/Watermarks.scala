@@ -27,6 +27,7 @@ class BoundedOutOfOrdernessGenerator extends WatermarkGenerator[SnortReport] {
 
 }
 
+
 /**
  * This generator generates watermarks that are lagging behind processing
  * time by a fixed amount. It assumes that elements arrive in Flink after

@@ -18,13 +18,17 @@
  */
 
 import org.apache.flink.api.common.eventtime.{BoundedOutOfOrdernessWatermarks, SerializableTimestampAssigner, WatermarkStrategy}
+import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.api.java.io.TextInputFormat
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.functions.source.FileProcessingMode
+import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import psd.SnortReport
-import psd.BoundedOutOfOrdernessGenerator
+import org.apache.flink.streaming.api.windowing.assigners.{EventTimeSessionWindows, TumblingEventTimeWindows, TumblingProcessingTimeWindows}
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow
+import org.apache.flink.util.Collector
+import psd.{MyProcessWindowFunction, SnortReport}
 
 import java.time.Duration
 
@@ -50,19 +54,26 @@ object StreamingJob {
 
     val snortLinesWithTimeStamps = SnortLines.assignTimestampsAndWatermarks(
       WatermarkStrategy
-        .forBoundedOutOfOrderness[SnortReport](Duration.ofSeconds(30))
+        .forMonotonousTimestamps[SnortReport]
         .withTimestampAssigner(new SerializableTimestampAssigner[SnortReport] {
-          override def extractTimestamp(element: SnortReport, recordTimestamp: Long): Long =
-            element.timestamp.getTime
+          override def extractTimestamp(element: SnortReport, recordTimestamp: Long): Long = element.timestamp.getTime
         }
     ))
+    val tmp = snortLinesWithTimeStamps.keyBy(_.proto)
+      .window(TumblingEventTimeWindows.of(Time.seconds(1)))
+      //.reduce((a, b) => if (a.src_port > b.src_port) a else b)
+      .process(new MyProcessWindowFunction())
+
+    tmp.print()
 
     // anliza => wartosci ktore zapisujemy || Logika biznesowa
 
     // sink - zapis analizy
-    SnortLines.print()
+    //SnortLines.print()
     // execute program
 
     env.execute("Flink Streaming Scala API Skeleton")
   }
 }
+
+
