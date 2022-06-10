@@ -14,25 +14,7 @@ class SnortReport (var timestamp: Timestamp, var msg: String, var proto: String,
       dst_port = SnortReportLine.split(",")(6).toInt)
   }
 
-  override def toString = s"$msg source: $src"
+  override def toString = s"$msg source: $src timestamp: $timestamp"
 
 }
 
-/*
-case class SnortReport(
-                   Timestamp: String,
-                   Message: String,
-                   Protocol: String
-                 )
-                 class SnortReport(var timestamp: Int, var msg: String, var proto: String, var src: String, var src_port: Int, var dst: String, var dst_port: Int) {
-
-  def this(SnortReportLine: String) = {
-    val elem = SnortReportLine.split(",")
-    this(1, "a", "b",)
-    //this(elem(0).toInt, elem(1), elem(2), elem(3), elem(4).toInt, elem(5), elem(6).toInt)
-  }
-
-  override def toString(): String = s"$msg source: $src"
-
-}
-                 */

@@ -98,6 +98,18 @@ under the License.
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-files</artifactId>
+			<version>1.14.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-jdbc_2.11</artifactId>
+			<version>1.14.4</version>
+		</dependency>
+
+
 
 	</dependencies>
 
