@@ -45,9 +45,9 @@ object SuddenTraffic {
       val protocolPattern: Regex = "(\\w+)".r
 
       val reportTuple = key match {
-        case ipPattern(k) => (k, null, null)
-        case portPattern(k) => (null, k, null)
-        case protocolPattern(k) => (null, null, k)
+        case ipPattern(k) => (null, k, null)
+        case portPattern(k) => (null, null, k)
+        case protocolPattern(k) => (k, null, null)
         case _ => (null, null, null)
         }
       out.collect(Report(AlarmName, count.toInt, reportTuple._1, reportTuple._2, reportTuple._3,

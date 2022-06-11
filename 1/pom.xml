@@ -108,6 +108,11 @@ under the License.
 			<artifactId>flink-connector-jdbc_2.11</artifactId>
 			<version>1.14.4</version>
 		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<version>42.3.5</version>
+		</dependency>
 
 
 

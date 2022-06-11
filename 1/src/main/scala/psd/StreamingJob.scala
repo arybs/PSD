@@ -1,45 +1,14 @@
-
-/**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-import org.apache.flink.api.common.eventtime.{BoundedOutOfOrdernessWatermarks, SerializableTimestampAssigner, WatermarkStrategy}
-import org.apache.flink.streaming.api.windowing.time.Time
+import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
 import org.apache.flink.api.java.io.TextInputFormat
 import org.apache.flink.api.scala.createTypeInformation
-import org.apache.flink.connector.file.src.FileSource
-import org.apache.flink.connector.file.src.reader.TextLineFormat
-import org.apache.flink.connector.jdbc.internal.JdbcOutputFormat
+import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
 import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.functions.source.FileProcessingMode
-import org.apache.flink.streaming.api.scala.function.ProcessWindowFunction
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
-import org.apache.flink.streaming.api.windowing.assigners.{EventTimeSessionWindows, TumblingEventTimeWindows, TumblingProcessingTimeWindows}
-import org.apache.flink.streaming.api.windowing.windows.TimeWindow
-import org.apache.flink.util.Collector
-import psd.{SuddenTraffic, SnortReport}
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows
+import org.apache.flink.streaming.api.windowing.time.Time
+import psd.{Report, SnortReport, SuddenTraffic}
 
-import java.time.Duration
-
-
-
-
-
-
+import java.sql.PreparedStatement
 
 
 object StreamingJob {
@@ -49,11 +18,7 @@ object StreamingJob {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
     // logika odczytanie z csv + watermark
-    val linereader = new TextInputFormat(new Path("./"))
-
-    //val lineSteam: DataStream[String] = env.readFile[String](linereader, "file:///G:\\Magisterka\\PSD\\Proj2/alert.csv",
-      //FileProcessingMode.PROCESS_CONTINUOUSLY, 30000L)
-    val lineSteam: DataStream[String] = env.readTextFile("./alert.csv") //TODO: Zmienic sciezke na parametr
+    val lineSteam: DataStream[String] = env.readTextFile("C:\\Users\\szewc/alert.csv") //TODO: Zmienic sciezke na parametr
 
     // Mapowanie do Streama z klasą SnortReport
     val SnortLines: DataStream[SnortReport] = lineSteam.map(x => new SnortReport(x))
@@ -88,14 +53,59 @@ object StreamingJob {
       .window(TumblingEventTimeWindows.of(Time.seconds(10)))
       .process(new SuddenTraffic.MyProcessWindowFunction())
 
+
     protoAnalysis.print()
     ipAnalysis.print()
     portAnalysis.print()
 
+    val statementBuilder: JdbcStatementBuilder[Report] =
+    new JdbcStatementBuilder[Report] {
+      override def accept(ps: PreparedStatement, t: Report): Unit = {
+        ps.setString(1, t.alarmType)
+        ps.setInt(2, t.count)
+        ps.setString(3, t.protocol)
+        ps.setString(4, t.ip)
+        ps.setString(5, t.port)
+        ps.setTimestamp(6, t.timestamp)
+      }
+    }
 
-    // sink - zapis analizy
-    //SnortLines.print()
-    // execute program
+    val connectionOptions: JdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+      .withUrl("jdbc:postgresql://localhost:5432/psdtest")
+      .withDriverName("org.postgresql.Driver")
+      .withUsername("postgres")
+      .withPassword("qwerty")
+      .build()
+
+    val executionOptions: JdbcExecutionOptions = JdbcExecutionOptions.builder()
+      .withBatchSize(1000)
+      .withBatchIntervalMs(200)
+      .withMaxRetries(5)
+      .build()
+
+    ipAnalysis addSink
+      JdbcSink.sink(
+        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        statementBuilder,
+        executionOptions,
+        connectionOptions
+      );
+
+    protoAnalysis addSink
+      JdbcSink.sink(
+        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        statementBuilder,
+        executionOptions,
+        connectionOptions
+      );
+
+    portAnalysis addSink
+      JdbcSink.sink(
+        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        statementBuilder,
+        executionOptions,
+        connectionOptions
+      );
 
     env.execute("Network analysis, stream based on Snort logs")
   }
