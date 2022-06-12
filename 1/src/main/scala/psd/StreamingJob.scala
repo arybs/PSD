@@ -49,7 +49,7 @@ object StreamingJob {
 
 
     // Grupowanie po Porcie docelowym
-    val portAnalysis = snortLinesWithTimeStamps.keyBy(_.dst_port.toString)
+    val portAnalysis = snortLinesWithTimeStamps.keyBy(_.dst_port)
       .window(TumblingEventTimeWindows.of(Time.seconds(10)))
       .process(new SuddenTraffic.MyProcessWindowFunction())
 
@@ -89,7 +89,7 @@ object StreamingJob {
         statementBuilder,
         executionOptions,
         connectionOptions
-      );
+      )
 
     protoAnalysis addSink
       JdbcSink.sink(
@@ -97,7 +97,7 @@ object StreamingJob {
         statementBuilder,
         executionOptions,
         connectionOptions
-      );
+      )
 
     portAnalysis addSink
       JdbcSink.sink(
@@ -105,7 +105,7 @@ object StreamingJob {
         statementBuilder,
         executionOptions,
         connectionOptions
-      );
+      )
 
     env.execute("Network analysis, stream based on Snort logs")
   }
