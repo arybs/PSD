@@ -1,5 +1,6 @@
 package psd
 
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.flink.api.scala._
 import org.apache.flink.api.common.state.ValueStateDescriptor
 import org.apache.flink.api.scala.typeutils.Types
@@ -11,17 +12,15 @@ import java.sql.Timestamp
 import scala.util.matching.Regex
 
 object SuddenTraffic {
-  val TrafficCountLimit: Int = 500 // per 10 s Windows
-  val TrafficCountRatio: Int = 5 // 5 times bigger to trigger Alarm
+  val conf: Config = ConfigFactory.load("application.conf")
+  val TrafficCountLimit: Int = conf.getInt("app.limit") // per 10 s Windows
+  val TrafficCountRatio: Int = conf.getInt("app.growthFactor") // n times bigger to trigger Alarm
   class MyProcessWindowFunction extends ProcessWindowFunction[SnortReport, Report, String, TimeWindow] {
     /**
-     * @param key
-     * @param context
-     * @param input
      * @param out - zwraca case class Report (zdefiniowana w pliku Report)
      */
 
-    def process(key: String, context: Context, input: Iterable[SnortReport], out: Collector[Report]) = {
+    def process(key: String, context: Context, input: Iterable[SnortReport], out: Collector[Report]): Unit = {
       var count = 0L
       for (in <- input) {
         count = count + 1
@@ -49,7 +48,7 @@ object SuddenTraffic {
         case portPattern(k) => (null, null, k)
         case protocolPattern(k) => (k, null, null)
         case _ => (null, null, null)
-        }
+      }
       out.collect(Report(AlarmName, count.toInt, reportTuple._1, reportTuple._2, reportTuple._3,
         new Timestamp(context.window.maxTimestamp())))
     }

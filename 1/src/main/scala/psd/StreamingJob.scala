@@ -1,24 +1,24 @@
 import org.apache.flink.api.common.eventtime.{SerializableTimestampAssigner, WatermarkStrategy}
-import org.apache.flink.api.java.io.TextInputFormat
 import org.apache.flink.api.scala.createTypeInformation
 import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
-import org.apache.flink.core.fs.Path
 import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows
 import org.apache.flink.streaming.api.windowing.time.Time
 import psd.{Report, SnortReport, SuddenTraffic}
 
 import java.sql.PreparedStatement
-
+import com.typesafe.config._
 
 object StreamingJob {
   def main(args: Array[String]) {
 
+    //val tmp = ConfigFactory.load("myconfiguration1.conf")
+    val conf = ConfigFactory.load("application.conf")
     // set up the streaming execution environment
     val env = StreamExecutionEnvironment.getExecutionEnvironment
 
     // logika odczytanie z csv + watermark
-    val lineSteam: DataStream[String] = env.readTextFile("C:\\Users\\szewc/alert.csv") //TODO: Zmienic sciezke na parametr
+    val lineSteam: DataStream[String] = env.readTextFile(conf.getString("app.PathFile"))
 
     // Mapowanie do Streama z klasą SnortReport
     val SnortLines: DataStream[SnortReport] = lineSteam.map(x => new SnortReport(x))
@@ -38,19 +38,19 @@ object StreamingJob {
     // Grupowanie po ip
 
     val ipAnalysis = snortLinesWithTimeStamps.keyBy(_.src)
-      .window(TumblingEventTimeWindows.of(Time.seconds(10)))
+      .window(TumblingEventTimeWindows.of(Time.seconds(conf.getInt("app.time"))))
       .process(new SuddenTraffic.MyProcessWindowFunction())
 
     // Grupowanie po protokole
 
     val protoAnalysis = snortLinesWithTimeStamps.keyBy(_.proto)
-      .window(TumblingEventTimeWindows.of(Time.seconds(10)))
+      .window(TumblingEventTimeWindows.of(Time.seconds(conf.getInt("app.time"))))
       .process(new SuddenTraffic.MyProcessWindowFunction())
 
 
     // Grupowanie po Porcie docelowym
-    val portAnalysis = snortLinesWithTimeStamps.keyBy(_.dst_port)
-      .window(TumblingEventTimeWindows.of(Time.seconds(10)))
+    val portAnalysis = snortLinesWithTimeStamps.filter(_.proto!="ICMP").keyBy(_.dst_port)
+      .window(TumblingEventTimeWindows.of(Time.seconds(conf.getInt("app.time"))))
       .process(new SuddenTraffic.MyProcessWindowFunction())
 
 
@@ -58,7 +58,7 @@ object StreamingJob {
     ipAnalysis.print()
     portAnalysis.print()
 
-    val statementBuilder: JdbcStatementBuilder[Report] =
+    val statementBuilder: JdbcStatementBuilder[Report] = {
     new JdbcStatementBuilder[Report] {
       override def accept(ps: PreparedStatement, t: Report): Unit = {
         ps.setString(1, t.alarmType)
@@ -69,12 +69,12 @@ object StreamingJob {
         ps.setTimestamp(6, t.timestamp)
       }
     }
-
+    }
     val connectionOptions: JdbcConnectionOptions = new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-      .withUrl("jdbc:postgresql://localhost:5432/psdtest")
+      .withUrl(conf.getString("app.databaseUrl"))
       .withDriverName("org.postgresql.Driver")
-      .withUsername("postgres")
-      .withPassword("qwerty")
+      .withUsername(conf.getString("app.databaseUser"))
+      .withPassword(conf.getString("app.databasePassword"))
       .build()
 
     val executionOptions: JdbcExecutionOptions = JdbcExecutionOptions.builder()
