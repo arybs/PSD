@@ -85,7 +85,7 @@ object StreamingJob {
 
     ipAnalysis addSink
       JdbcSink.sink(
-        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO table_name (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
         statementBuilder,
         executionOptions,
         connectionOptions
@@ -93,7 +93,7 @@ object StreamingJob {
 
     protoAnalysis addSink
       JdbcSink.sink(
-        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO table_name (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
         statementBuilder,
         executionOptions,
         connectionOptions
@@ -101,7 +101,7 @@ object StreamingJob {
 
     portAnalysis addSink
       JdbcSink.sink(
-        "INSERT INTO protosss (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
+        "INSERT INTO table_name (alarmType, count, protocol, ip, port, timestamp) VALUES (?,?,?,?,?,?)",
         statementBuilder,
         executionOptions,
         connectionOptions

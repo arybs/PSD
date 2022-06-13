@@ -67,7 +67,7 @@ pliku z logami) wymagać będzie:
 * [Apache Flink](https://nightlies.apache.org/flink/flink-docs-release-1.14/docs/try-flink/local_installation/)
 * [Maven](https://maven.apache.org/guides/getting-started/maven-in-five-minutes.html)
 
-Dodatkowo nalezy zadbać o skonfigurowanie bazy PostgreSQL.
+Dodatkowo nalezy zadbać o skonfigurowanie bazy PostgreSQL, do tego wymagane są sterowniki dla wersji 42.3.5 PostgreSQL z rozszerzeniem .jar w lokalizacji: /opt/flink/lib/
 Przy założeniu posiadaniu odpowiednich dependencji uruchamianie aplikacji Flinka
 odbywa się zgodnie z [instrukcją](https://nightlies.apache.org/flink/flink-docs-release-1.14/docs/try-flink/local_installation/#starting-and-stopping-a-local-cluster)
 
